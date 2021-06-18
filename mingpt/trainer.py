@@ -38,7 +38,7 @@ class TrainerConfig:
 
 class Trainer:
 
-    def __init__(self, model, train_dataset, test_dataset, config):
+    def __init__(self, model, train_dataset, test_dataset, config, loss_fn):
         self.model = model
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
@@ -49,6 +49,8 @@ class Trainer:
         if torch.cuda.is_available():
             self.device = torch.cuda.current_device()
             self.model = torch.nn.DataParallel(self.model).to(self.device)
+
+        self.loss_fn = loss_fn
 
     def save_checkpoint(self):
         # DataParallel wrappers keep raw model object in .module attribute
@@ -79,7 +81,8 @@ class Trainer:
 
                 # forward the model
                 with torch.set_grad_enabled(is_train):
-                    logits, loss = model(x, y)
+                    logits, _ = model(x, y)
+                    loss = self.loss_fn(logits, y)
                     loss = loss.mean() # collapse all losses if they are scattered on multiple gpus
                     losses.append(loss.item())
 
